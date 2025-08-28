@@ -1,6 +1,0 @@
-outs:
-- md5: 98ae11b655adc694332213d21f2e9360.dir
-  size: 3453337796
-  nfiles: 60001
-  hash: md5
-  path: salt_paper_fashion_mnist
