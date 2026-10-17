@@ -12,9 +12,10 @@ raw movies:
 - reconstruction results.
 
 The training and evaluation code is in
-[cryo-EM-team/multinoise2noise](https://github.com/cryo-EM-team/multinoise2noise). Large files
-are versioned with [DVC](https://dvc.org/) and stored on Google Drive; this git repository
-contains only the `.dvc` pointer files and this README.
+[Grigori200/multinoise2noise](https://github.com/Grigori200/multinoise2noise)
+([10.5281/zenodo.23427776](https://doi.org/10.5281/zenodo.23427776)). Large files are versioned
+with [DVC](https://dvc.org/) and stored on Google Drive; this git repository contains only the
+`.dvc` pointer files and this README.
 
 ## Datasets
 
@@ -23,17 +24,17 @@ contains only the `.dvc` pointer files and this README.
 | `10025/` | T20S proteasome | EMPIAR-10025 | D7 | 38 | 1.3947 | 300 | 0.9856 |
 | `10474/` | Human light-chain apoferritin | EMPIAR-10474 | O | 30 | 1.36 | 384 | 0.706667 |
 | `10948/` | GroEL | EMPIAR-10948 | D7 | 40 | 1.0 | 360 | 0.813 |
-| `10025_sim/` | T20S proteasome, simulated | PDB 6BDF | D7 | TODO | – | 300 | 0.9856 |
-| `10474_sim/` | Apoferritin, simulated | PDB 6WX6 | O | TODO | – | 384 | 0.706667 |
-| `10948_sim/` | GroEL, simulated | PDB 1SX3 | D7 | TODO | – | 360 | 0.813 |
+| `10025_sim/` | T20S proteasome, simulated | PDB 6BDF | D7 | 38 | – | 300 | 0.9856 |
+| `10474_sim/` | Apoferritin, simulated | PDB 6WX6 | O | 30 | – | 384 | 0.706667 |
+| `10948_sim/` | GroEL, simulated | PDB 1SX3 | D7 | 40 | – | 360 | 0.813 |
 
-Number of particles per partition (from `<ds>/training/<ds>_split.json`):
+Number of particles per partition (from `paper/<ds>/training/<ds>_split.json`):
 
 | Dataset | All | Train | Validation | Test (half 1 / half 2) | Micrographs |
 |---------|-----|-------|------------|------------------------|-------------|
 | 10025 | 34,297 | 8,488 | 17,226 | 8,583 (4,291 / 4,292) | 196 |
 | 10948 | 49,670 | 12,519 | 24,915 | 12,236 (6,118 / 6,118) | 466 |
-| 10474 | TODO | TODO | TODO | TODO | TODO |
+| 10474 | 203,903 | 50,847 | 102,037 | 51,019 (25,509 / 25,510) | 326 |
 | 10025_sim | 80,000 | 20,000 | 40,000 | 20,000 (10,000 / 10,000) | 200 |
 | 10474_sim | 51,200 | 12,800 | 25,600 | 12,800 (6,400 / 6,400) | 200 |
 | 10948_sim | 80,000 | 20,000 | 40,000 | 20,000 (10,000 / 10,000) | 200 |
@@ -63,14 +64,7 @@ cryo_datasets/
 ├── <ds>/                          one directory per dataset (DVC: <ds>.dvc)
 │   ├── <ds>.star                  all particles (RELION 3.1 STAR: optics + particles)
 │   ├── <ds>_subset.star           particles of the original training runs (see below)
-│   ├── training/
-│   │   ├── <ds>_split.star        all particles with a train / val / test `split` column
-│   │   └── <ds>_split.json        particle counts and checks of the partition
-│   ├── reference/
-│   │   └── <ds>_model.mrc         reference map for model-to-map FSC
-│   ├── masks/
-│   │   ├── <ds>_mask_tight.mrc    tight molecular mask derived from the reference map
-│   │   └── <ds>_mask_tight.json   mask parameters and coverage statistics
+│   ├── <ds>_model.mrc             map of the atomic model
 │   ├── subsets/
 │   │   └── denoised_<N>_<r>.star  evaluation subsets of the test set (see below)
 │   ├── extraction/                particle movie stacks (HDF5, dataset `data`)
@@ -80,14 +74,25 @@ cryo_datasets/
 │   ├── mask.mrc                   mask used by the reconstruction step of the training pipeline
 │   └── half_{1,2}_reconstruction.mrc  raw-data half-maps used by the training pipeline
 ├── checkpoints/<ds>/*.ckpt        trained models (DVC: checkpoints.dvc)
-└── results/                       (DVC: results.dvc)
-    ├── <ds>/<method>/...          reconstructions of denoised test subsets
-    └── evaluation/                metrics, tables and figures of the paper
+├── results/10474/<method>/...     all reconstructions of denoised 10474 test subsets (DVC: results.dvc)
+└── paper/                         everything the paper's evaluation reads (DVC: paper.dvc)
+    ├── <ds>/
+    │   ├── training/
+    │   │   ├── <ds>_split.star    all particles with a train / val / test `split` column
+    │   │   └── <ds>_split.json    particle counts and checks of the partition
+    │   ├── reference/
+    │   │   └── <ds>_model.mrc     reference map for model-to-map FSC and local resolution
+    │   └── masks/
+    │       ├── <ds>_mask_tight.mrc   tight molecular mask derived from the reference map
+    │       └── <ds>_mask_tight.json  mask parameters and coverage statistics
+    ├── results/<ds>/<method>/Refine_4/<r>/denoised_mean/   half-maps of the paper's metrics
+    ├── results/<ds>_sim/frame_sweep/                       FRC files of Fig. 2
+    └── evaluation/                metrics, tables and figures of the paper (expected outputs)
 ```
 
-`<ds>_model.mrc`, `mask.mrc` and the half-maps stay at the top level of each dataset because
-the training configs of the code repository read them from there; `reference/` and `masks/`
-contain the files used for the paper's evaluation.
+`paper/` is self-contained: the evaluation of the code repository (`configs_eval/paper.yaml`)
+reads only files below it, so `dvc pull paper.dvc` is enough to recompute every number,
+table and figure.
 
 ### Training, validation and test partition
 
@@ -95,7 +100,7 @@ Each dataset is split at the particle level into training (25 %), validation (50
 (25 %) sets. The splits were drawn at random, stratified by micrograph, and no particle belongs
 to two splits.
 
-- `training/<ds>_split.star` is the authoritative partition: every particle of `<ds>.star`
+- `paper/<ds>/training/<ds>_split.star` is the authoritative partition: every particle of `<ds>.star`
   with a `split` column (`train`, `val`, `test`). `rlnRandomSubset` of the test particles
   defines the two half-sets used for half-map reconstructions. It is read by the code
   repository with `datamodule.split_mode=column`.
@@ -104,12 +109,13 @@ to two splits.
   training set, half 2 is the test set. The validation set is the remaining half of
   `<ds>.star`.
 
-`training/<ds>_split.star` was built from these files with
+`paper/<ds>/training/<ds>_split.star` was built from these files with
 `python -m source.datasets.split_star --full <ds>.star --subset <ds>_subset.star
---test-halves subsets/denoised_1_1.star --out training/<ds>_split.star`. For 10025, one test
+--test-halves subsets/denoised_1_1.star --out paper/<ds>/training/<ds>_split.star`. For 10025, one test
 particle is listed in both halves of `subsets/denoised_1_1.star`; the partition keeps its
 first occurrence (half 2), recorded under `test_halves_conflicts_kept_first` in
-`10025_split.json`.
+`10025_split.json`. For 10474, one test particle is listed twice in the same half
+(`test_halves_duplicate_rows` in `10474_split.json`).
 
 ### Evaluation subsets and results
 
@@ -123,23 +129,23 @@ files share particles. In `10025/subsets/denoised_4_*.star` (only), some particl
 twice within a half or in both halves of a file (6–14 repeated rows and 4–15 shared
 particles per file).
 
-`results/<ds>/<method>/Refine_<N>/<r>/` holds the reconstructions of
-`subsets/denoised_<N>_<r>.star` denoised by `<method>`:
+`results/10474/<method>/Refine_<N>/<r>/` holds the reconstructions of
+`10474/subsets/denoised_<N>_<r>.star` denoised by `<method>`: `denoised_mean/` (used for the paper's
+metrics) and `denoised_full_dose/` (an alternative image mode), each with
+`half_{1,2}_reconstruction.mrc`, `reconstruction.mrc`, sharpened maps and `fsc.csv`. Methods:
+`raw`, `noise2noise` (Topaz-Denoise baseline), `noise2noise_ctf`, `multi_noise2noise`,
+`multi_noise2noise_ctf`, `multi_noise2noise_dw`, `multi_noise2noise_ctf_dw` (DW variants for
+experimental data only).
 
-- `denoised_mean/` – reconstructions used for the paper's metrics,
-- `denoised_full_dose/` – reconstructions of an alternative image mode.
+`paper/results/<ds>/<method>/Refine_4/<r>/denoised_mean/` holds the files of these
+reconstructions that the paper's evaluation reads: `half_{1,2}_reconstruction.mrc` of
+`r = 1..5`, and `half_1_sharp.mrc` of `r = 1` (rendered in Figs. 7 and 8).
 
-Each directory contains `half_{1,2}_reconstruction.mrc`, `reconstruction.mrc`, sharpened maps
-and `fsc.csv`. Methods used in the paper: `raw`, `noise2noise` (Topaz-Denoise baseline),
-`noise2noise_ctf`, `multi_noise2noise`, `multi_noise2noise_ctf`, `multi_noise2noise_dw`,
-`multi_noise2noise_ctf_dw` (DW variants for experimental data only). Other directories
-(`noise2noise_ctf_forward`, `model_fsc`, `scunet`, `base_scunet`) are not part of the paper.
-
-`results/<ds>_sim/frame_sweep/split_<N>/frc_metrics_test.csv` (simulated datasets only) holds
-the FRC between denoised test images and clean projections of the model trained with `N`
+`paper/results/<ds>_sim/frame_sweep/split_<N>/frc_metrics_test.csv` (simulated datasets only)
+holds the FRC between denoised test images and clean projections of the model trained with `N`
 frames averaged into the input, for single, averaged and whole-recording inference (Fig. 2).
 
-`results/evaluation/` holds the outputs of the evaluation package of the code repository
+`paper/evaluation/` holds the outputs of the evaluation package of the code repository
 (`configs_eval/paper.yaml`) computed from the files above:
 
 - `reconstruction_fsc.csv` – model-to-map FSC metrics of every (dataset, method, subset,
@@ -152,10 +158,11 @@ frames averaged into the input, for single, averaged and whole-recording inferen
 
 ### Reference maps and masks
 
-`reference/<ds>_model.mrc` is the reference for model-to-map FSC and local resolution. The tight
-mask is `auto_mask(reference, 0.05 × max(reference))`, extended by 3 voxels and with a 10-voxel
-raised-cosine edge, computed with `python -m source.evaluation.make_mask` of the code
-repository. `masks/<ds>_mask_tight.json` reports which fraction of the box it covers and that
+`paper/<ds>/reference/<ds>_model.mrc` is the reference for model-to-map FSC and local
+resolution. The tight mask is `auto_mask(reference, 0.05 × max(reference))`, extended by 3
+voxels and with a 10-voxel raised-cosine edge, computed with
+`python -m source.evaluation.make_mask` of the code repository.
+`paper/<ds>/masks/<ds>_mask_tight.json` reports which fraction of the box it covers and that
 all reference voxels above mean + 1σ lie inside it.
 
 ## Checkpoints
@@ -182,8 +189,8 @@ the paper.
 
 ## Getting the data
 
-Requirements: Python, git, and disk space: `10025/` alone is about 470 GB and `results/`
-about 1.5 TB (sizes are listed in each `.dvc` file).
+Requirements: Python, git, and disk space: `paper/` is about 70 GB, `10025/` about 470 GB
+and `results/` about 1.5 TB (sizes are listed in each `.dvc` file).
 
 ```bash
 git clone https://github.com/cryo-EM-team/cryo_datasets.git
@@ -216,13 +223,13 @@ client can be configured with `gdrive_client_id` and `gdrive_client_secret` (als
 ### Pulling
 
 ```bash
-dvc pull 10948.dvc            # one dataset
+dvc pull paper.dvc            # evaluation inputs and expected outputs
 dvc pull checkpoints.dvc      # all checkpoints
+dvc pull 10948.dvc            # one dataset
 dvc pull                      # everything
 ```
 
-On clusters without direct internet access, load the site proxy first (e.g. `module load
-eth_proxy` on ETH Euler).
+On clusters without direct internet access, load the site proxy first.
 
 ## Licences
 
