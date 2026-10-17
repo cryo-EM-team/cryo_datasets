@@ -4,3 +4,8 @@
 /10474
 /10948
 /10025
+/checkpoints
+/results
+/checkpoints_ei
+/*_tmp
+slurm-*.out
